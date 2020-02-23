@@ -1,0 +1,53 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+
+    color: #ddd;
+    font-size: 16px;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-weight: bold;
+}
+
+html, body {
+    background: #111;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+header, section {
+    width: 80vw;
+}
+
+header {
+    margin-bottom: 1rem;
+}
+
+form#block-form input[type="text"] {
+    height: 2rem;
+    padding: 0.5rem;
+
+    color: #222;
+    background: #ddd;
+    border: none;
+}
+
+form#block-form input[type="text"]:focus {
+    outline: none;
+}
+
+ul#blocks-list li {
+    list-style-type: none;
+}
+
+form#block-form, ul#blocks-list li {
+    background: #222;
+    padding: 1rem;
+    margin: 2rem 0;
+
+    box-shadow: #333 1rem 1rem 0;
+}
