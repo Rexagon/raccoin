@@ -7,7 +7,7 @@ use warp::Filter;
 
 use crate::block::{Block, BlockData};
 use crate::blockchain::BlockChain;
-use crate::rpc::{self, BlockChainServiceClient};
+use crate::peers_network::{Peer, PeersNetwork};
 use crate::state::State;
 
 pub async fn serve(addr: SocketAddr, shared_state: State) {
@@ -75,22 +75,17 @@ fn create_block(
 }
 
 fn get_peers(
-    data: Arc<Mutex<Vec<(SocketAddr, BlockChainServiceClient)>>>,
+    data: Arc<Mutex<PeersNetwork>>,
 ) -> impl warp::Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::path("peers").and(warp::get()).map(move || {
-        let peers = data.lock().unwrap();
+        let network = data.lock().unwrap();
 
-        let peers = peers
-            .iter()
-            .map(|(addr, _)| *addr)
-            .collect::<Vec<SocketAddr>>();
-
-        warp::reply::json(&peers)
+        warp::reply::json(&network.peers())
     })
 }
 
 fn add_peer(
-    data: Arc<Mutex<Vec<(SocketAddr, BlockChainServiceClient)>>>,
+    data: Arc<Mutex<PeersNetwork>>,
 ) -> impl warp::Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::path("peers")
         .and(warp::post())
@@ -99,13 +94,13 @@ fn add_peer(
             let data = data.clone();
 
             async move {
-                let peer = match rpc::connect(body.addr).await {
-                    Ok(peer) => peer,
+                let peer = match Peer::try_create(body.addr).await {
+                    Ok(p) => p,
                     Err(_) => return Err(warp::reject::custom(PeerConnectionError)),
                 };
 
-                let mut peers = data.lock().unwrap();
-                peers.push((body.addr, peer));
+                let mut network = data.lock().unwrap();
+                network.add(peer);
 
                 Ok(warp::reply::with_status("", warp::http::StatusCode::OK))
             }

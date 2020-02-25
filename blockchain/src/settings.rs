@@ -8,6 +8,7 @@ use crate::block::Block;
 pub struct Settings {
     pub api: ApiSettings,
     pub genesis: Block,
+    pub peers: Vec<SocketAddr>,
 }
 
 #[derive(Debug, Deserialize)]

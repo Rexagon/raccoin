@@ -1,6 +1,7 @@
 mod block;
 mod blockchain;
 mod hash;
+mod peers_network;
 mod rest_api;
 mod rpc;
 mod settings;
