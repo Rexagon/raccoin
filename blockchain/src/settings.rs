@@ -2,12 +2,12 @@ use config::{Config, ConfigError, File};
 use serde::Deserialize;
 use std::net::SocketAddr;
 
-use crate::block::{Block, BlockData};
+use crate::block::Block;
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub api: ApiSettings,
-    pub genesis: Block<BlockData>,
+    pub genesis: Block,
 }
 
 #[derive(Debug, Deserialize)]

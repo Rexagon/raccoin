@@ -1,13 +1,12 @@
 use futures::future::{self, Ready};
-use std::iter::FromIterator;
 use tarpc::context;
 
-use crate::block::{Block, BlockData};
+use crate::block::Block;
 use crate::rpc::BlockChainService;
-use crate::SharedState;
+use crate::state::State;
 
 #[derive(Clone)]
-pub struct Server(pub SharedState<BlockData>);
+pub struct Server(pub State);
 
 impl BlockChainService for Server {
     type SendLatestBlocksFut = Ready<bool>;
@@ -15,18 +14,16 @@ impl BlockChainService for Server {
     fn send_latest_blocks(
         self,
         _: context::Context,
-        _blocks: Vec<Block<BlockData>>,
+        _blocks: Vec<Block>,
     ) -> Self::SendLatestBlocksFut {
         unimplemented!();
     }
 
-    type FetchLatestBlocksFut = Ready<Vec<Block<BlockData>>>;
+    type FetchLatestBlocksFut = Ready<Vec<Block>>;
 
     fn fetch_latest_blocks(self, _: context::Context, n: usize) -> Self::FetchLatestBlocksFut {
         let blockchain = self.0.blockchain.lock().unwrap();
 
-        let result = Vec::from_iter(blockchain.blocks.iter().rev().take(n).rev().cloned());
-
-        future::ready(result)
+        future::ready(blockchain.tail(n))
     }
 }

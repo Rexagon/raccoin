@@ -1,23 +1,21 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use std::iter::FromIterator;
 
 use crate::block::Block;
 
 #[derive(Debug, Serialize)]
-pub struct BlockChain<T> {
-    pub blocks: Vec<Block<T>>,
+pub struct BlockChain {
+    pub blocks: Vec<Block>,
 }
 
-impl<'de, T> BlockChain<T>
-where
-    T: Serialize + Deserialize<'de> + Clone,
-{
-    pub fn new(genesis: Block<T>) -> Self {
+impl BlockChain {
+    pub fn new(genesis: Block) -> Self {
         BlockChain {
             blocks: vec![genesis],
         }
     }
 
-    pub fn add_block(&mut self, block: Block<T>) -> bool {
+    pub fn add_block(&mut self, block: Block) -> bool {
         if !block.validate_previous(self.blocks.last().unwrap()) {
             return false;
         }
@@ -26,7 +24,11 @@ where
         true
     }
 
-    pub fn last(&self) -> &Block<T> {
+    pub fn tail(&self, n: usize) -> Vec<Block> {
+        Vec::from_iter(self.blocks.iter().rev().take(n).rev().cloned())
+    }
+
+    pub fn last(&self) -> &Block {
         self.blocks.last().unwrap()
     }
 }

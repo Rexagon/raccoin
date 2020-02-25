@@ -1,19 +1,16 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::Deserialize;
 use std::{
     net::SocketAddr,
     sync::{Arc, Mutex},
 };
 use warp::Filter;
 
-use crate::block::Block;
+use crate::block::{Block, BlockData};
 use crate::blockchain::BlockChain;
 use crate::rpc::{self, BlockChainServiceClient};
-use crate::SharedState;
+use crate::state::State;
 
-pub async fn serve<D>(addr: SocketAddr, shared_data: SharedState<D>)
-where
-    D: Serialize + DeserializeOwned + Sync + Send + Clone + 'static,
-{
+pub async fn serve(addr: SocketAddr, shared_state: State) {
     let options = warp::options().and(warp::header::<String>("Origin").map(|origin| {
         Ok(warp::http::Response::builder()
             .header("access-control-allow-methods", "HEAD, GET")
@@ -25,7 +22,7 @@ where
             .body(""))
     }));
 
-    let routes = create_all_route_handlers(&shared_data);
+    let routes = create_all_route_handlers(&shared_state);
 
     let routes = warp::any()
         .and(options)
@@ -43,39 +40,30 @@ where
     warp::serve(routes).run(addr).await;
 }
 
-fn create_all_route_handlers<D>(
-    data: &SharedState<D>,
-) -> impl warp::Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
-where
-    D: Serialize + DeserializeOwned + Sync + Send + Clone + 'static,
-{
+fn create_all_route_handlers(
+    data: &State,
+) -> impl warp::Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     get_blocks(data.blockchain.clone())
         .or(create_block(data.blockchain.clone()))
         .or(get_peers(data.peers.clone()))
         .or(add_peer(data.peers.clone()))
 }
 
-fn get_blocks<D>(
-    data: Arc<Mutex<BlockChain<D>>>,
-) -> impl warp::Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
-where
-    D: Serialize + DeserializeOwned + Sync + Send + Clone + 'static,
-{
+fn get_blocks(
+    data: Arc<Mutex<BlockChain>>,
+) -> impl warp::Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::path("blocks")
         .and(warp::get())
         .map(move || warp::reply::json(&data.lock().unwrap().blocks))
 }
 
-fn create_block<D>(
-    data: Arc<Mutex<BlockChain<D>>>,
-) -> impl warp::Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone
-where
-    D: Serialize + DeserializeOwned + Sync + Send + Clone + 'static,
-{
+fn create_block(
+    data: Arc<Mutex<BlockChain>>,
+) -> impl warp::Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     warp::path("blocks")
         .and(warp::post())
         .and(warp::body::json())
-        .map(move |body: D| {
+        .map(move |body: BlockData| {
             let mut blockchain = data.lock().unwrap();
 
             let block = Block::from_previous(blockchain.last(), body);

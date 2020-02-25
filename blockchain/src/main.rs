@@ -4,18 +4,10 @@ mod hash;
 mod rest_api;
 mod rpc;
 mod settings;
+mod state;
 
-use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
-
-use crate::blockchain::BlockChain;
 use crate::settings::Settings;
-
-#[derive(Clone)]
-pub struct SharedState<T> {
-    pub blockchain: Arc<Mutex<BlockChain<T>>>,
-    pub peers: Arc<Mutex<Vec<(SocketAddr, rpc::BlockChainServiceClient)>>>,
-}
+use crate::state::State;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -23,10 +15,7 @@ async fn main() -> std::io::Result<()> {
 
     let settings = Settings::new().expect("Unable to parse settings.json");
 
-    let shared_state = SharedState {
-        blockchain: Arc::new(Mutex::new(BlockChain::new(settings.genesis))),
-        peers: Arc::new(Mutex::new(Vec::new())),
-    };
+    let shared_state = State::new(&settings);
 
     tokio::spawn(rpc::serve(settings.api.rpc, shared_state.clone()));
 
