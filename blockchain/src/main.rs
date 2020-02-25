@@ -3,29 +3,34 @@ mod blockchain;
 mod hash;
 mod rest_api;
 mod rpc;
+mod settings;
 
-use std::{
-    net::IpAddr,
-    sync::{Arc, Mutex},
-};
+use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
 
-use crate::block::{Block, BlockData};
 use crate::blockchain::BlockChain;
-use crate::hash::Hash;
+use crate::settings::Settings;
+
+#[derive(Clone)]
+pub struct SharedState<T> {
+    pub blockchain: Arc<Mutex<BlockChain<T>>>,
+    pub peers: Arc<Mutex<Vec<(SocketAddr, rpc::BlockChainServiceClient)>>>,
+}
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    let genesis = Block::new(0, BlockData::Text("genesis".to_string()), &Hash::default());
-    let blockchain = Arc::new(Mutex::new(BlockChain::new(genesis)));
+    let settings = Settings::new().expect("Unable to parse settings.json");
 
-    tokio::spawn(rpc::serve(
-        (IpAddr::from([0, 0, 0, 0]), 11000),
-        blockchain.clone(),
-    ));
+    let shared_state = SharedState {
+        blockchain: Arc::new(Mutex::new(BlockChain::new(settings.genesis))),
+        peers: Arc::new(Mutex::new(Vec::new())),
+    };
 
-    rest_api::serve(([0, 0, 0, 0], 8080), blockchain).await;
+    tokio::spawn(rpc::serve(settings.api.rpc, shared_state.clone()));
+
+    rest_api::serve(settings.api.rest, shared_state).await;
 
     Ok(())
 }

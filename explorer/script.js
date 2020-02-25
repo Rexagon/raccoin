@@ -1,4 +1,4 @@
-const API_URL = 'http://127.0.0.1:8080';
+const API_URL = 'http://127.0.0.1:11000';
 
 const getBlocks = () => fetch(`${API_URL}/blocks`).then(data => data.json());
 const createBlock = data => fetch(`${API_URL}/blocks`, {

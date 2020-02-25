@@ -3,13 +3,12 @@ pub mod server;
 pub use server::*;
 
 use futures::{future, prelude::*};
-use std::sync::{Arc, Mutex};
-use tarpc::server::Channel;
-use tokio::net::ToSocketAddrs;
+use std::net::SocketAddr;
+use tarpc::{client, server::Channel};
 use tokio_serde::formats::Bincode;
 
 use crate::block::{Block, BlockData};
-use crate::blockchain::BlockChain;
+use crate::SharedState;
 
 #[tarpc::service]
 pub trait BlockChainService {
@@ -18,10 +17,7 @@ pub trait BlockChainService {
     async fn fetch_latest_blocks(n: usize) -> Vec<Block<BlockData>>;
 }
 
-pub async fn serve<T>(addr: T, data: Arc<Mutex<BlockChain<BlockData>>>) -> std::io::Result<()>
-where
-    T: ToSocketAddrs,
-{
+pub async fn serve(addr: SocketAddr, data: SharedState<BlockData>) -> std::io::Result<()> {
     tarpc::serde_transport::tcp::listen(&addr, Bincode::default)
         .await?
         .filter_map(|r| future::ready(r.ok()))
@@ -35,4 +31,11 @@ where
         .await;
 
     Ok(())
+}
+
+pub async fn connect(addr: SocketAddr) -> std::io::Result<BlockChainServiceClient> {
+    let other_server = tarpc::serde_transport::tcp::connect(&addr, Bincode::default()).await?;
+    let client = BlockChainServiceClient::new(client::Config::default(), other_server).spawn()?;
+
+    Ok(client)
 }

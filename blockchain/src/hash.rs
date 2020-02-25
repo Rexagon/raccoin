@@ -81,7 +81,7 @@ impl<'de> Visitor<'de> for HashVisitor {
         formatter.write_str("a hex string of length 64")
     }
 
-    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
     where
         E: serde::de::Error,
     {
